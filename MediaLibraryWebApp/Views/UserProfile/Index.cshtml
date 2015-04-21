@@ -10,6 +10,13 @@
 	<p>An unexpected error occurred while retrieving your profile.  Please try again.  You may need to sign-in.</p>
 	</div>
 }
+@if (ViewBag.ErrorMessage == "AuthorizationRequired")
+{
+    <p>You have to sign-in to see your profile. Click @Html.ActionLink("here", "Index", "UserProfile", new { reauth = true }, null) to sign-in.</p>
+}
+else 
+{ 
+    
 <table class="table table-bordered table-striped">
     @if (Model.User != null)
     {
@@ -56,23 +63,15 @@
         }
     }
 </table>
-@if (ViewBag.ErrorMessage == "AuthorizationRequired")
-{
-    <p>You have to sign-in to see your profile. Click @Html.ActionLink("here", "Index", "UserProfile", new { reauth = true }, null) to sign-in.</p>
-}
 
-<h2>JWT token</h2>
-<pre>
-@Model.Token.RawData
-</pre>
 
-<h2>JWT token claims</h2>
+<h2>Sign In JWT token claims </h2>
 <table class="table table-bordered table-striped">
     <th>Claim Type</th>
     <th>Claim Value</th>
-    @if (Model.Token != null)
+    @if (Model.OpenConnectRequestAccessToken != null)
     {
-        foreach (var claim in Model.Token.Claims)
+        foreach (var claim in Model.OpenConnectRequestAccessToken.Claims)
         {
             <tr>
                 <td>@claim.Type</td>
@@ -82,5 +81,23 @@
     }
 </table>
 
+<h2>Graph API Recourse JWT token claims</h2>
+<table class="table table-bordered table-striped">
+    <th>Claim Type</th>
+    <th>Claim Value</th>
+    @if (Model.GraphApiAccessToken != null)
+    {
+        foreach (var claim in Model.GraphApiAccessToken.Claims)
+        {
+            <tr>
+                <td>@claim.Type</td>
+                <td>@claim.Value</td>
+            </tr>
+        }
+    }
+</table>
+
+
+}
 
 

@@ -46,6 +46,8 @@ namespace MediaLibraryWebApp
         public static readonly string Authority = String.Format(CultureInfo.InvariantCulture, AadInstance, Tenant);
         //Azure Active Directory Graph API endpoint
         public static string GraphResourceId = ConfigurationManager.AppSettings["ida:GraphResourceId"];
+        //Media Portal App API endpoint
+        //public static string MediaAppResourceId = ConfigurationManager.AppSettings["ida:MediaAppResourceId"];
         //Federation metadata Url
         public static string MetadataUri = ConfigurationManager.AppSettings["ida:FederationMetaDataUri"];
         //Object Id of AD security group which has application Administrator rights. Used in sample to create media asset auth policies

@@ -42,7 +42,6 @@ namespace MediaLibraryWebApp.Controllers
             string userObjectID = ClaimsPrincipal.Current.FindFirst(Configuration.ClaimsObjectidentifier).Value;
             AuthenticationContext authContext = new AuthenticationContext(Configuration.Authority, new NaiveSessionCache(userObjectID));
             authContext.TokenCache.Clear();
-
             HttpContext.GetOwinContext().Authentication.SignOut(
                 OpenIdConnectAuthenticationDefaults.AuthenticationType, CookieAuthenticationDefaults.AuthenticationType);
         }

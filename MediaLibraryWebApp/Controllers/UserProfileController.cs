@@ -29,6 +29,7 @@ using Microsoft.Azure.ActiveDirectory.GraphClient;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using Microsoft.Owin.Security.OpenIdConnect;
 using AuthenticationContext = Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext;
+using Microsoft.Owin;
 
 
 namespace MediaLibraryWebApp.Controllers
@@ -44,19 +45,50 @@ namespace MediaLibraryWebApp.Controllers
             // Retrieve the user's name, tenantID, and access token since they are parameters used to query the Graph API.
             //
             UserProfile profile;
-            string jwtToken = ClaimsPrincipal.Current.FindFirst(Configuration.ClaimsJwtToken).Value;
-            JwtSecurityToken token = new JwtSecurityToken(jwtToken);
-            string userObjectID = ClaimsPrincipal.Current.FindFirst(Configuration.ClaimsObjectidentifier).Value;
-            
-            AuthenticationContext authContext = new AuthenticationContext(Configuration.Authority, new NaiveSessionCache(userObjectID));
+            IOwinContext owinContext = HttpContext.GetOwinContext();
+            string userObjectID = owinContext.Authentication.User.Claims.First(c => c.Type == Configuration.ClaimsObjectidentifier).Value;
+            NaiveSessionCache cache = new NaiveSessionCache(userObjectID);          
+            AuthenticationContext authContext = new AuthenticationContext(Configuration.Authority,cache);
+                        
             try
             {
-                ActiveDirectoryClient activeDirectoryClient = Factory.GetActiveDirectoryClientAsApplication(jwtToken);
+                TokenCacheItem graphAPITokenCache =authContext.TokenCache.ReadItems().Where(c => c.Resource == MediaLibraryWebApp.Configuration.GraphResourceId).FirstOrDefault();
+                           
+             
+                
+                if (graphAPITokenCache == null )
+                {
+
+                  
+                    authContext.TokenCache.Clear();
+                    profile = new UserProfile();
+                    ViewBag.ErrorMessage = "AuthorizationRequired";
+                    if (Request.QueryString["reauth"] == "True")
+                    {
+                        //
+                        // Send an OpenID Connect sign-in request to get a new set of tokens.
+                        // If the user still has a valid session with Azure AD, they will not be prompted for their credentials.
+                        // The OpenID Connect middleware will return to this controller after the sign-in response has been handled.
+                        //
+                        HttpContext.GetOwinContext().Authentication.Challenge(OpenIdConnectAuthenticationDefaults.AuthenticationType);
+                    }
+
+                    return View(profile);
+                }
+
+
+                string graphAPIAccessToken = graphAPITokenCache.AccessToken;
+
+
+                JwtSecurityToken signInToken = new JwtSecurityToken(owinContext.Authentication.User.Claims.First(c => c.Type == Configuration.ClaimsJwtToken).Value);
+
+                ActiveDirectoryClient activeDirectoryClient = Factory.GetActiveDirectoryClientAsApplication(graphAPIAccessToken);
                 User userProfile = (User)await activeDirectoryClient.Users.GetByObjectId(userObjectID).ExecuteAsync();
                 List<string> membergroups = (await userProfile.GetMemberGroupsAsync(false)).ToList();
                 var groups = await activeDirectoryClient.Groups.ExecuteAsync();
-                profile = new UserProfile();
-                profile.Token = token;
+                profile = new UserProfile();               
+                profile.GraphApiAccessToken = new JwtSecurityToken(graphAPIAccessToken);
+                profile.OpenConnectRequestAccessToken = signInToken;
                 profile.MemberGroups = membergroups;
                 profile.AllGroups = groups.CurrentPage;
                 profile.User = userProfile;

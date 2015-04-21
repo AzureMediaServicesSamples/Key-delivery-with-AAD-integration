@@ -15,6 +15,8 @@
 //----------------------------------------------------------------------------------------------
 
 using System;
+using System.Linq;
+using System.Collections.Generic;
 using System.Web;
 using MediaLibraryWebApp.Utils;
 using Microsoft.WindowsAzure.MediaServices.Client;
@@ -26,6 +28,7 @@ using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using System.Threading.Tasks;
 using System.Security.Claims;
 using AuthenticationContext = Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext;
+using Microsoft.Owin;
 
 namespace MediaLibraryWebApp
 {
@@ -48,13 +51,13 @@ namespace MediaLibraryWebApp
             app.SetDefaultSignInAsAuthenticationType(CookieAuthenticationDefaults.AuthenticationType);
 
             app.UseCookieAuthentication(new CookieAuthenticationOptions());
-
             app.UseOpenIdConnectAuthentication(
                 new OpenIdConnectAuthenticationOptions
                 {
                     ClientId = MediaLibraryWebApp.Configuration.ClientId,
                     Authority = MediaLibraryWebApp.Configuration.Authority,
                     PostLogoutRedirectUri = MediaLibraryWebApp.Configuration.PostLogoutRedirectUri,
+                    
 
                     Notifications = new OpenIdConnectAuthenticationNotifications()
                     {
@@ -64,21 +67,33 @@ namespace MediaLibraryWebApp
                         AuthorizationCodeReceived = (context) =>
                         {
                             var code = context.Code;
-
-                            ClientCredential credential = new ClientCredential(MediaLibraryWebApp.Configuration.ClientId, MediaLibraryWebApp.Configuration.AppKey);
+                            System.IdentityModel.Tokens.JwtSecurityToken jwtToken = context.JwtSecurityToken;
+                           
                             string userObjectID = context.AuthenticationTicket.Identity.FindFirst(MediaLibraryWebApp.Configuration.ClaimsObjectidentifier).Value;
+
+                            Microsoft.IdentityModel.Clients.ActiveDirectory.ClientCredential credential = new Microsoft.IdentityModel.Clients.ActiveDirectory.ClientCredential(MediaLibraryWebApp.Configuration.ClientId, MediaLibraryWebApp.Configuration.AppKey);
                             
-                            AuthenticationContext authContext = new AuthenticationContext(MediaLibraryWebApp.Configuration.Authority, new NaiveSessionCache(userObjectID));
-                            AuthenticationResult result = authContext.AcquireTokenByAuthorizationCode(code, new Uri(HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Path)), credential, MediaLibraryWebApp.Configuration.GraphResourceId);
+                            NaiveSessionCache cache = new NaiveSessionCache(userObjectID);
+                            AuthenticationContext authContext = new AuthenticationContext(MediaLibraryWebApp.Configuration.Authority, cache);
+                           
+                            //Getting a token to connect with GraphApi later on userProfile page
+                            AuthenticationResult graphAPiresult = authContext.AcquireTokenByAuthorizationCode(code, new Uri(HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Path)), credential, MediaLibraryWebApp.Configuration.GraphResourceId);
+                                                      
 
                             //Initializing  MediaServicesCredentials in order to obtain access token to be used to connect 
                             var amsCredentials = new MediaServicesCredentials(MediaLibraryWebApp.Configuration.MediaAccount, MediaLibraryWebApp.Configuration.MediaKey);
                             //Forces to get access token
                             amsCredentials.RefreshToken();
+                            
 
                             //Adding token to a claim so it can be accessible within controller
-                            context.AuthenticationTicket.Identity.AddClaim(new Claim(MediaLibraryWebApp.Configuration.ClaimsJwtToken,result.AccessToken));
+                            context.AuthenticationTicket.Identity.AddClaim(new Claim(MediaLibraryWebApp.Configuration.ClaimsJwtToken, jwtToken.RawData));
+
+                            //Adding media services access token as claim so it can be accessible within controller
                             context.AuthenticationTicket.Identity.AddClaim(new Claim(MediaLibraryWebApp.Configuration.ClaimsAmsAcessToken, amsCredentials.AccessToken));
+                            
+
+                            
                             return Task.FromResult(0);
                         }
 

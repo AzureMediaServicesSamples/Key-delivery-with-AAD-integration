@@ -18,7 +18,6 @@ using System;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens;
 using System.Linq;
-using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
@@ -30,6 +29,10 @@ using Microsoft.WindowsAzure.MediaServices.Client;
 using Microsoft.WindowsAzure.MediaServices.Client.ContentKeyAuthorization;
 using Microsoft.WindowsAzure.MediaServices.Client.DynamicEncryption;
 using WebGrease.Css.Extensions;
+using System.Web;
+using Microsoft.IdentityModel.Clients.ActiveDirectory;
+using MediaLibraryWebApp.Utils;
+using Microsoft.Owin.Security.OpenIdConnect;
 
 namespace MediaLibraryWebApp.Controllers
 {
@@ -189,7 +192,7 @@ namespace MediaLibraryWebApp.Controllers
                 //Create asset delivery policy
                 CreateAssetDeliveryPolicy(assetToConfigure, assetToConfigure.ContentKeys[0], cloudMediaContext);
                 //Create Authorization policy
-                AddAuthorizationPolicyToContentKey(assetId, cloudMediaContext, assetToConfigure.ContentKeys[0], claimType, claimValue);
+                AddAuthorizationPolicyToContentKey(assetId, cloudMediaContext, assetToConfigure.ContentKeys[0], claimType, claimValue,GetJwtSecurityToken());
 
                 // Create a locator to the streaming content on an origin. 
                 cloudMediaContext.Locators.CreateLocator(LocatorType.OnDemandOrigin, assetToConfigure, accessPolicy, DateTime.UtcNow.AddMinutes(-5));
@@ -208,7 +211,7 @@ namespace MediaLibraryWebApp.Controllers
             return RedirectToAction("Index");
         }
 
-        public static IContentKey AddAuthorizationPolicyToContentKey(string assetID, CloudMediaContext mediaContext, IContentKey objIContentKey, string claimType, string claimValue)
+        public IContentKey AddAuthorizationPolicyToContentKey(string assetID, CloudMediaContext mediaContext, IContentKey objIContentKey, string claimType, string claimValue, JwtSecurityToken token)
         {
            //we name auth policy same as asset
             var policy = mediaContext.ContentKeyAuthorizationPolicies.Where(c => c.Name == assetID).FirstOrDefault();
@@ -228,7 +231,6 @@ namespace MediaLibraryWebApp.Controllers
                 List<ContentKeyAuthorizationPolicyRestriction> restrictions = new List<ContentKeyAuthorizationPolicyRestriction>();
 
                 List<X509Certificate2> certs = GetX509Certificate2FromADMetadataEndpoint();
-                JwtSecurityToken token = GetJwtSecurityToken();
 
                 TokenRestrictionTemplate template = new TokenRestrictionTemplate();
                 template.TokenType = TokenType.JWT;
@@ -243,8 +245,8 @@ namespace MediaLibraryWebApp.Controllers
                 }
 
                 var audience = token.Audiences.First();
-                template.Audience = new Uri(audience);
-                template.Issuer = new Uri(token.Issuer);
+                template.Audience = audience;
+                template.Issuer = token.Issuer;
                 string requirements = TokenRestrictionTemplateSerializer.Serialize(template);
 
                 ContentKeyAuthorizationPolicyRestriction restriction = new ContentKeyAuthorizationPolicyRestriction
@@ -271,11 +273,10 @@ namespace MediaLibraryWebApp.Controllers
             return IContentKeyUpdated;
         }
 
-        private static JwtSecurityToken GetJwtSecurityToken()
-        {
-            string jwtToken = ClaimsPrincipal.Current.FindFirst("ADJwtTokenClaim").Value;
-            JwtSecurityToken token = new JwtSecurityToken(jwtToken);
-            return token;
+        private JwtSecurityToken GetJwtSecurityToken()
+        {         
+            return new JwtSecurityToken(HttpContext.GetOwinContext().Authentication.User.Claims.First(c => c.Type == MediaLibraryWebApp.Configuration.ClaimsJwtToken).Value);
+         
         }
 
         private static List<X509Certificate2> GetX509Certificate2FromADMetadataEndpoint()
@@ -388,9 +389,8 @@ namespace MediaLibraryWebApp.Controllers
 
         private bool IsAdminUser()
         {
-              JwtSecurityToken token = GetJwtSecurityToken();
-            var admin = token.Claims.FirstOrDefault(c => c.Type == "groups" && c.Value == Configuration.AdminGroupId);
-             return admin!=null ? true:false; 
+            var admin = HttpContext.GetOwinContext().Authentication.User.Claims.FirstOrDefault(c => c.Type == "groups" && c.Value == Configuration.AdminGroupId);
+            return admin != null ? true : false;
         }
 
     }

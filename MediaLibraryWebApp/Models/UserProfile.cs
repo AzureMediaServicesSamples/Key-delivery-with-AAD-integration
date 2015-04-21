@@ -23,7 +23,9 @@ namespace MediaLibraryWebApp.Models
     public class UserProfile
     {
         public IUser User { get; set; }
-        public JwtSecurityToken Token { get; set; }
+        public JwtSecurityToken GraphApiAccessToken { get; set; }
+        //public JwtSecurityToken MediaLibraryWebAppAccessToken { get; set; }
+        public JwtSecurityToken OpenConnectRequestAccessToken { get; set; }
         public IReadOnlyList<IGroup> AllGroups { get; set; }
         public IEnumerable<string> MemberGroups { get; set; }
     }
