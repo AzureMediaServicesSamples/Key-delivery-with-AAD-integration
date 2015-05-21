@@ -53,6 +53,7 @@ namespace MediaLibraryWebApp.Controllers
             try
             {
                 TokenCacheItem graphAPITokenCache =authContext.TokenCache.ReadItems().Where(c => c.Resource == MediaLibraryWebApp.Configuration.GraphResourceId).FirstOrDefault();
+                TokenCacheItem kdAPITokenCache = authContext.TokenCache.ReadItems().Where(c => c.Resource == MediaLibraryWebApp.Configuration.KdResourceId).FirstOrDefault();
                            
              
                 
@@ -80,7 +81,7 @@ namespace MediaLibraryWebApp.Controllers
                 string graphAPIAccessToken = graphAPITokenCache.AccessToken;
 
 
-                JwtSecurityToken signInToken = new JwtSecurityToken(owinContext.Authentication.User.Claims.First(c => c.Type == Configuration.ClaimsJwtToken).Value);
+                JwtSecurityToken signInToken = new JwtSecurityToken(owinContext.Authentication.User.Claims.First(c => c.Type == Configuration.ClaimsSignInJwtToken).Value);
 
                 ActiveDirectoryClient activeDirectoryClient = Factory.GetActiveDirectoryClientAsApplication(graphAPIAccessToken);
                 User userProfile = (User)await activeDirectoryClient.Users.GetByObjectId(userObjectID).ExecuteAsync();
@@ -88,7 +89,8 @@ namespace MediaLibraryWebApp.Controllers
                 var groups = await activeDirectoryClient.Groups.ExecuteAsync();
                 profile = new UserProfile();               
                 profile.GraphApiAccessToken = new JwtSecurityToken(graphAPIAccessToken);
-                profile.OpenConnectRequestAccessToken = signInToken;
+                profile.KeyDeliveryApiAccessToken = new JwtSecurityToken(kdAPITokenCache.AccessToken);
+                profile.OpenConnectSignInToken = signInToken;
                 profile.MemberGroups = membergroups;
                 profile.AllGroups = groups.CurrentPage;
                 profile.User = userProfile;

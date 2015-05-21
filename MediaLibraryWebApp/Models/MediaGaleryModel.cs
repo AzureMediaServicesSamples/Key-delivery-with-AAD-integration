@@ -17,6 +17,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens;
 using Microsoft.Azure.ActiveDirectory.GraphClient;
 using Microsoft.WindowsAzure.MediaServices.Client;
 
@@ -29,5 +30,6 @@ namespace MediaLibraryWebApp.Models
 
         public IReadOnlyList<IGroup> AllGroups { get; set; }
         public IStreamingEndpoint StreamingEndPoint { get; set; }
+        public JwtSecurityToken JwtToken { get; set; }
     }
 }

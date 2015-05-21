@@ -3,46 +3,51 @@
     ViewBag.Title = "Graph API User Profile";
 }
 
-<h2>@ViewBag.Title.</h2>
+
 @if (ViewBag.ErrorMessage == "UnexpectedError")
 {
     <div class="bs-callout bs-callout-danger" id="callout-fieldset-disabled-ie"><h4>Sign in</h4>
-	<p>An unexpected error occurred while retrieving your profile.  Please try again.  You may need to sign-in.</p>
-	</div>
+    <p>An unexpected error occurred while retrieving your profile.  Please try again.  You may need to sign-in.</p>
+    </div>
 }
 @if (ViewBag.ErrorMessage == "AuthorizationRequired")
 {
     <p>You have to sign-in to see your profile. Click @Html.ActionLink("here", "Index", "UserProfile", new { reauth = true }, null) to sign-in.</p>
 }
 else 
-{ 
-    
-<table class="table table-bordered table-striped">
-    @if (Model.User != null)
-    {
-        <tr>
-            <td>User Principal Name </td>
-            <td>@Model.User.UserPrincipalName</td>
-        </tr>
-        <tr>
-            <td>Display Name</td>
-            <td>@Model.User.DisplayName</td>
-        </tr>
-        <tr>
-            <td>First Name</td>
-            <td>@Model.User.GivenName</td>
-        </tr>
-        <tr>
-            <td>Last Name</td>
-            <td>@Model.User.Surname</td>
-        </tr>
-        <tr>
-            <td>Mail</td>
-            <td>@Model.User.Mail</td>
-        </tr>
-    }
-</table>
-
+{
+    <H3>Sign In JWT Raw Token data</H3>
+    <p>@Model.OpenConnectSignInToken.RawData</p>
+    <h3>Sign In JWT Decoded token</h3>
+    <p>@Model.OpenConnectSignInToken</p>
+    <h2>@ViewBag.Title.</h2>
+    <p>
+        <table class="table table-bordered table-striped">
+            @if (Model.User != null)
+            {
+                <tr>
+                    <td>User Principal Name </td>
+                    <td>@Model.User.UserPrincipalName</td>
+                </tr>
+                <tr>
+                    <td>Display Name</td>
+                    <td>@Model.User.DisplayName</td>
+                </tr>
+                <tr>
+                    <td>First Name</td>
+                    <td>@Model.User.GivenName</td>
+                </tr>
+                <tr>
+                    <td>Last Name</td>
+                    <td>@Model.User.Surname</td>
+                </tr>
+                <tr>
+                    <td>Mail</td>
+                    <td>@Model.User.Mail</td>
+                </tr>
+            }
+        </table>
+    </p>
 
 <h2>All Graph API User Groups</h2>
 <table class="table table-bordered table-striped">
@@ -69,9 +74,9 @@ else
 <table class="table table-bordered table-striped">
     <th>Claim Type</th>
     <th>Claim Value</th>
-    @if (Model.OpenConnectRequestAccessToken != null)
+    @if (Model.OpenConnectSignInToken != null)
     {
-        foreach (var claim in Model.OpenConnectRequestAccessToken.Claims)
+        foreach (var claim in Model.OpenConnectSignInToken.Claims)
         {
             <tr>
                 <td>@claim.Type</td>
@@ -82,20 +87,36 @@ else
 </table>
 
 <h2>Graph API Recourse JWT token claims</h2>
-<table class="table table-bordered table-striped">
-    <th>Claim Type</th>
-    <th>Claim Value</th>
-    @if (Model.GraphApiAccessToken != null)
-    {
-        foreach (var claim in Model.GraphApiAccessToken.Claims)
+    <table class="table table-bordered table-striped">
+        <th>Claim Type</th>
+        <th>Claim Value</th>
+        @if (Model.GraphApiAccessToken != null)
         {
-            <tr>
-                <td>@claim.Type</td>
-                <td>@claim.Value</td>
-            </tr>
+            foreach (var claim in Model.GraphApiAccessToken.Claims)
+            {
+                <tr>
+                    <td>@claim.Type</td>
+                    <td>@claim.Value</td>
+                </tr>
+            }
         }
-    }
-</table>
+    </table>
+
+    <h2>Key Delivery Recourse JWT token claims</h2>
+    <table class="table table-bordered table-striped">
+        <th>Claim Type</th>
+        <th>Claim Value</th>
+        @if (Model.KeyDeliveryApiAccessToken != null)
+        {
+            foreach (var claim in Model.KeyDeliveryApiAccessToken.Claims)
+            {
+                <tr>
+                    <td>@claim.Type</td>
+                    <td>@claim.Value</td>
+                </tr>
+            }
+        }
+    </table>
 
 
 }

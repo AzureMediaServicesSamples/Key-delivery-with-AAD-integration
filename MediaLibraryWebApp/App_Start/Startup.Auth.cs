@@ -78,6 +78,11 @@ namespace MediaLibraryWebApp
                            
                             //Getting a token to connect with GraphApi later on userProfile page
                             AuthenticationResult graphAPiresult = authContext.AcquireTokenByAuthorizationCode(code, new Uri(HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Path)), credential, MediaLibraryWebApp.Configuration.GraphResourceId);
+
+                            //Getting a access token which can be used to configure auth restrictions for multiple tentants since audience will be same for each web app requesting this token 
+                            AuthenticationResult kdAPiresult = authContext.AcquireTokenByAuthorizationCode(code, new Uri(HttpContext.Current.Request.Url.GetLeftPart(UriPartial.Path)), credential, MediaLibraryWebApp.Configuration.KdResourceId);
+
+                            string kdAccessToken = kdAPiresult.AccessToken;
                                                       
 
                             //Initializing  MediaServicesCredentials in order to obtain access token to be used to connect 
@@ -87,7 +92,7 @@ namespace MediaLibraryWebApp
                             
 
                             //Adding token to a claim so it can be accessible within controller
-                            context.AuthenticationTicket.Identity.AddClaim(new Claim(MediaLibraryWebApp.Configuration.ClaimsJwtToken, jwtToken.RawData));
+                            context.AuthenticationTicket.Identity.AddClaim(new Claim(MediaLibraryWebApp.Configuration.ClaimsSignInJwtToken, jwtToken.RawData));
 
                             //Adding media services access token as claim so it can be accessible within controller
                             context.AuthenticationTicket.Identity.AddClaim(new Claim(MediaLibraryWebApp.Configuration.ClaimsAmsAcessToken, amsCredentials.AccessToken));

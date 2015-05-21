@@ -32,7 +32,9 @@ using WebGrease.Css.Extensions;
 using System.Web;
 using Microsoft.IdentityModel.Clients.ActiveDirectory;
 using MediaLibraryWebApp.Utils;
+using Microsoft.Owin;
 using Microsoft.Owin.Security.OpenIdConnect;
+using AuthenticationContext = Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext;
 
 namespace MediaLibraryWebApp.Controllers
 {
@@ -47,6 +49,11 @@ namespace MediaLibraryWebApp.Controllers
             MediaLibraryModel model = new MediaLibraryModel();
             model.VideoList = new List<Tuple<IAsset, ILocator, Uri>>();
             model.IsCurrentUserMemberOfAdminGroup = IsAdminUser();
+            model.JwtToken = GetJwtSecurityToken();
+            if (model.JwtToken == null)
+            {
+                return View(model);
+            }
 
             try
             {
@@ -236,8 +243,8 @@ namespace MediaLibraryWebApp.Controllers
                 template.TokenType = TokenType.JWT;
                 template.PrimaryVerificationKey = new X509CertTokenVerificationKey(certs[0]);
                 certs.GetRange(1, certs.Count - 1).ForEach(c => template.AlternateVerificationKeys.Add(new X509CertTokenVerificationKey(c)));
-               
-                
+
+
                 //Ignore Empty claims
                 if (!String.IsNullOrEmpty(claimType) && !String.IsNullOrEmpty(claimValue))
                 {
@@ -274,8 +281,36 @@ namespace MediaLibraryWebApp.Controllers
         }
 
         private JwtSecurityToken GetJwtSecurityToken()
-        {         
-            return new JwtSecurityToken(HttpContext.GetOwinContext().Authentication.User.Claims.First(c => c.Type == MediaLibraryWebApp.Configuration.ClaimsJwtToken).Value);
+        {
+
+            IOwinContext owinContext = HttpContext.GetOwinContext();
+            string userObjectID = owinContext.Authentication.User.Claims.First(c => c.Type == Configuration.ClaimsObjectidentifier).Value;
+            NaiveSessionCache cache = new NaiveSessionCache(userObjectID);
+            AuthenticationContext authContext = new AuthenticationContext(Configuration.Authority, cache);
+            TokenCacheItem kdAPITokenCache = authContext.TokenCache.ReadItems().Where(c => c.Resource == MediaLibraryWebApp.Configuration.KdResourceId).FirstOrDefault();
+
+            if (kdAPITokenCache == null)
+            {
+
+
+                authContext.TokenCache.Clear();
+               
+                ViewBag.ErrorMessage = "AuthorizationRequired";
+                if (Request.QueryString["reauth"] == "True")
+                {
+                    //
+                    // Send an OpenID Connect sign-in request to get a new set of tokens.
+                    // If the user still has a valid session with Azure AD, they will not be prompted for their credentials.
+                    // The OpenID Connect middleware will return to this controller after the sign-in response has been handled.
+                    //
+                    HttpContext.GetOwinContext().Authentication.Challenge(OpenIdConnectAuthenticationDefaults.AuthenticationType);
+                }
+
+                return null;
+            }
+            
+            
+            return new JwtSecurityToken(kdAPITokenCache.AccessToken);
          
         }
 

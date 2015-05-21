@@ -1,10 +1,23 @@
 ﻿@using System.Security.Claims
+@using Microsoft.Owin.Security.Provider
 @using Microsoft.WindowsAzure.MediaServices.Client
 @model MediaLibraryWebApp.Models.MediaLibraryModel
 @{
     ViewBag.Title = "Azure Media Services Assets";
 }
 <h3>Your Media Library</h3>
+
+@if (ViewBag.ErrorMessage == "AuthorizationRequired")
+{
+    <p>You have to sign-in to see your to do list. Click @Html.ActionLink("here", "Index", "MediaLibrary", new { reauth = true }, null) to sign-in.</p>
+    return;
+}
+@if (ViewBag.ErrorMessage == "UnexpectedError")
+{
+    <p>An unexpected error occurred while retrieving your to do list.  Please try again.  You may need to sign-in.</p>
+    return;
+}
+
 
 <p>On this page you should see list of all streamable media assets. You are able to playback only videos for which authentication policy has been configured to include on of yours AD JWT token claims (in this demo AD group ObjectID).
     <ul>
@@ -81,7 +94,7 @@
                         <div>
                             <object width="600" height="420">
                                 <param name="movie" value="@(Url.Content("~/Content/StrobeMediaPlayback.2.0.swf"))"></param>
-                                <param name="flashvars" value="src=@(i.Item3)/Manifest&autoPlay=false&plugin_AdaptiveStreamingPlugin=/Content/MSAdaptiveStreamingPlugin-v1.0.12-osmf2.0.swf&AdaptiveStreamingPlugin_retryLive=true&AdaptiveStreamingPlugin_retryInterval=10&AdaptiveStreamingPlugin_encryptionKeyToken=Bearer @(ClaimsPrincipal.Current.FindFirst("ADJwtTokenClaim").Value)"></param>
+                                <param name="flashvars" value="src=@(i.Item3)/Manifest&autoPlay=false&plugin_AdaptiveStreamingPlugin=/Content/MSAdaptiveStreamingPlugin-v1.0.12-osmf2.0.swf&AdaptiveStreamingPlugin_retryLive=true&AdaptiveStreamingPlugin_retryInterval=10&AdaptiveStreamingPlugin_encryptionKeyToken=Bearer @(Model.JwtToken.RawData)"></param>
                                 <param name="allowFullScreen" value="true"></param>
                                 <param name="allowscriptaccess" value="always"></param>
                                 <param name="wmode" value="direct"></param>
@@ -92,7 +105,7 @@
                                        wmode="direct"
                                        width="600"
                                        height="420"
-                                       flashvars="src=@(i.Item3)/Manifest&autoPlay=false&plugin_AdaptiveStreamingPlugin=/Content/MSAdaptiveStreamingPlugin-v1.0.12-osmf2.0.swf&AdaptiveStreamingPlugin_retryLive=true&AdaptiveStreamingPlugin_retryInterval=10&AdaptiveStreamingPlugin_encryptionKeyToken=Bearer @(ClaimsPrincipal.Current.FindFirst("ADJwtTokenClaim").Value)"></embed>
+                                       flashvars="src=@(i.Item3)/Manifest&autoPlay=false&plugin_AdaptiveStreamingPlugin=/Content/MSAdaptiveStreamingPlugin-v1.0.12-osmf2.0.swf&AdaptiveStreamingPlugin_retryLive=true&AdaptiveStreamingPlugin_retryInterval=10&AdaptiveStreamingPlugin_encryptionKeyToken=Bearer @(Model.JwtToken.RawData)"></embed>
                             </object>
                         </div>
                         @if (Model.IsCurrentUserMemberOfAdminGroup == true)
@@ -130,12 +143,3 @@
         }
     </table>
 </p>
-@if (ViewBag.ErrorMessage == "AuthorizationRequired")
-{
-    <p>You have to sign-in to see your to do list. Click @Html.ActionLink("here", "Index", "MediaLibrary", new { reauth = true }, null) to sign-in.</p>
-
-}
-@if (ViewBag.ErrorMessage == "UnexpectedError")
-{
-    <p>An unexpected error occurred while retrieving your to do list.  Please try again.  You may need to sign-in.</p>
-}

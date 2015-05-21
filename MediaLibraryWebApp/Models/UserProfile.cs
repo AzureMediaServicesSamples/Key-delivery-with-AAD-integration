@@ -24,9 +24,9 @@ namespace MediaLibraryWebApp.Models
     {
         public IUser User { get; set; }
         public JwtSecurityToken GraphApiAccessToken { get; set; }
-        //public JwtSecurityToken MediaLibraryWebAppAccessToken { get; set; }
-        public JwtSecurityToken OpenConnectRequestAccessToken { get; set; }
+        public JwtSecurityToken OpenConnectSignInToken { get; set; }
         public IReadOnlyList<IGroup> AllGroups { get; set; }
         public IEnumerable<string> MemberGroups { get; set; }
+        public JwtSecurityToken KeyDeliveryApiAccessToken { get; set; }
     }
 }
