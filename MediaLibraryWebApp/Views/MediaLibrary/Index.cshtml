@@ -1,10 +1,23 @@
 ﻿@using System.Security.Claims
+@using Microsoft.Owin.Security.Provider
 @using Microsoft.WindowsAzure.MediaServices.Client
 @model MediaLibraryWebApp.Models.MediaLibraryModel
 @{
     ViewBag.Title = "Azure Media Services Assets";
 }
 <h3>Your Media Library</h3>
+
+@if (ViewBag.ErrorMessage == "AuthorizationRequired")
+{
+    <p>You have to sign-in to see your to do list. Click @Html.ActionLink("here", "Index", "MediaLibrary", new { reauth = true }, null) to sign-in.</p>
+    return;
+}
+@if (ViewBag.ErrorMessage == "UnexpectedError")
+{
+    <p>An unexpected error occurred while retrieving your to do list.  Please try again.  You may need to sign-in.</p>
+    return;
+}
+
 
 <p>On this page you should see list of all streamable media assets. You are able to playback only videos for which authentication policy has been configured to include on of yours AD JWT token claims (in this demo AD group ObjectID).
     <ul>
@@ -27,9 +40,6 @@
 @if (Model.IsCurrentUserMemberOfAdminGroup == true)
 {
     <div class="bs-callout bs-callout-info"><h4>Admin access</h4><p>As member of Admin Group you need to specify which video will be displayed for which user group. Look into profile page to see ObjectIDs of user group. In ClaimType textbox put value as 'group' and in claimValue put ObjectID of AD Group. Only users belonging to this group will be able to obtain content key to decrypt video. </p></div>
-
-    <div class="bs-callout bs-callout-warning"><h4>Signing Keys and Azure AD certificates rollover</h4><p>For following example Azure Media Services stores copy of Azure Active Directory signing certificates in order to validate JWT token signature. After Azure Active Directory signing cretificate rotation it is up to application to implement logic to update sertificates within Azure Media Services content key auth policies. Read more about Azure AD certificates rollover at http://technet.microsoft.com/en-us/library/jj933264.aspx </p></div>
-
 
     using (Html.BeginForm("CleanAllPermissions", "MediaLibrary"))
     {
@@ -81,7 +91,7 @@
                         <div>
                             <object width="600" height="420">
                                 <param name="movie" value="@(Url.Content("~/Content/StrobeMediaPlayback.2.0.swf"))"></param>
-                                <param name="flashvars" value="src=@(i.Item3)/Manifest&autoPlay=false&plugin_AdaptiveStreamingPlugin=/Content/MSAdaptiveStreamingPlugin-v1.0.12-osmf2.0.swf&AdaptiveStreamingPlugin_retryLive=true&AdaptiveStreamingPlugin_retryInterval=10&AdaptiveStreamingPlugin_encryptionKeyToken=Bearer @(ClaimsPrincipal.Current.FindFirst("ADJwtTokenClaim").Value)"></param>
+                                <param name="flashvars" value="src=@(i.Item3)/Manifest&autoPlay=false&plugin_AdaptiveStreamingPlugin=/Content/MSAdaptiveStreamingPlugin-v1.0.12-osmf2.0.swf&AdaptiveStreamingPlugin_retryLive=true&AdaptiveStreamingPlugin_retryInterval=10&AdaptiveStreamingPlugin_encryptionKeyToken=Bearer @(Model.JwtToken.RawData)"></param>
                                 <param name="allowFullScreen" value="true"></param>
                                 <param name="allowscriptaccess" value="always"></param>
                                 <param name="wmode" value="direct"></param>
@@ -92,7 +102,7 @@
                                        wmode="direct"
                                        width="600"
                                        height="420"
-                                       flashvars="src=@(i.Item3)/Manifest&autoPlay=false&plugin_AdaptiveStreamingPlugin=/Content/MSAdaptiveStreamingPlugin-v1.0.12-osmf2.0.swf&AdaptiveStreamingPlugin_retryLive=true&AdaptiveStreamingPlugin_retryInterval=10&AdaptiveStreamingPlugin_encryptionKeyToken=Bearer @(ClaimsPrincipal.Current.FindFirst("ADJwtTokenClaim").Value)"></embed>
+                                       flashvars="src=@(i.Item3)/Manifest&autoPlay=false&plugin_AdaptiveStreamingPlugin=/Content/MSAdaptiveStreamingPlugin-v1.0.12-osmf2.0.swf&AdaptiveStreamingPlugin_retryLive=true&AdaptiveStreamingPlugin_retryInterval=10&AdaptiveStreamingPlugin_encryptionKeyToken=Bearer @(Model.JwtToken.RawData)"></embed>
                             </object>
                         </div>
                         @if (Model.IsCurrentUserMemberOfAdminGroup == true)
@@ -130,12 +140,3 @@
         }
     </table>
 </p>
-@if (ViewBag.ErrorMessage == "AuthorizationRequired")
-{
-    <p>You have to sign-in to see your to do list. Click @Html.ActionLink("here", "Index", "MediaLibrary", new { reauth = true }, null) to sign-in.</p>
-
-}
-@if (ViewBag.ErrorMessage == "UnexpectedError")
-{
-    <p>An unexpected error occurred while retrieving your to do list.  Please try again.  You may need to sign-in.</p>
-}

@@ -19,20 +19,19 @@ using System.Collections.Generic;
 using System.IdentityModel.Tokens;
 using System.Linq;
 using System.Security.Cryptography;
-using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using System.Web;
 using System.Web.Mvc;
-using System.Xml;
-using System.Xml.XPath;
 using MediaLibraryWebApp.Models;
+using MediaLibraryWebApp.Utils;
+using Microsoft.IdentityModel.Clients.ActiveDirectory;
+using Microsoft.Owin;
+using Microsoft.Owin.Security.OpenIdConnect;
 using Microsoft.WindowsAzure.MediaServices.Client;
 using Microsoft.WindowsAzure.MediaServices.Client.ContentKeyAuthorization;
 using Microsoft.WindowsAzure.MediaServices.Client.DynamicEncryption;
 using WebGrease.Css.Extensions;
-using System.Web;
-using Microsoft.IdentityModel.Clients.ActiveDirectory;
-using MediaLibraryWebApp.Utils;
-using Microsoft.Owin.Security.OpenIdConnect;
+using AuthenticationContext = Microsoft.IdentityModel.Clients.ActiveDirectory.AuthenticationContext;
 
 namespace MediaLibraryWebApp.Controllers
 {
@@ -47,6 +46,11 @@ namespace MediaLibraryWebApp.Controllers
             MediaLibraryModel model = new MediaLibraryModel();
             model.VideoList = new List<Tuple<IAsset, ILocator, Uri>>();
             model.IsCurrentUserMemberOfAdminGroup = IsAdminUser();
+            model.JwtToken = GetJwtSecurityToken();
+            if (model.JwtToken == null)
+            {
+                return View(model);
+            }
 
             try
             {
@@ -230,14 +234,15 @@ namespace MediaLibraryWebApp.Controllers
 
                 List<ContentKeyAuthorizationPolicyRestriction> restrictions = new List<ContentKeyAuthorizationPolicyRestriction>();
 
-                List<X509Certificate2> certs = GetX509Certificate2FromADMetadataEndpoint();
+               
 
                 TokenRestrictionTemplate template = new TokenRestrictionTemplate();
                 template.TokenType = TokenType.JWT;
-                template.PrimaryVerificationKey = new X509CertTokenVerificationKey(certs[0]);
-                certs.GetRange(1, certs.Count - 1).ForEach(c => template.AlternateVerificationKeys.Add(new X509CertTokenVerificationKey(c)));
-               
-                
+                //Using Active Directory Open ID discovery spec to use Json Web Keys during token verification
+                template.OpenIdConnectDiscoveryDocument = new OpenIdConnectDiscoveryDocument("https://login.windows.net/common/.well-known/openid-configuration");
+              
+
+
                 //Ignore Empty claims
                 if (!String.IsNullOrEmpty(claimType) && !String.IsNullOrEmpty(claimValue))
                 {
@@ -274,37 +279,39 @@ namespace MediaLibraryWebApp.Controllers
         }
 
         private JwtSecurityToken GetJwtSecurityToken()
-        {         
-            return new JwtSecurityToken(HttpContext.GetOwinContext().Authentication.User.Claims.First(c => c.Type == MediaLibraryWebApp.Configuration.ClaimsJwtToken).Value);
+        {
+
+            IOwinContext owinContext = HttpContext.GetOwinContext();
+            string userObjectID = owinContext.Authentication.User.Claims.First(c => c.Type == Configuration.ClaimsObjectidentifier).Value;
+            NaiveSessionCache cache = new NaiveSessionCache(userObjectID);
+            AuthenticationContext authContext = new AuthenticationContext(Configuration.Authority, cache);
+            TokenCacheItem kdAPITokenCache = authContext.TokenCache.ReadItems().Where(c => c.Resource == Configuration.KdResourceId).FirstOrDefault();
+
+            if (kdAPITokenCache == null)
+            {
+
+
+                authContext.TokenCache.Clear();
+               
+                ViewBag.ErrorMessage = "AuthorizationRequired";
+                if (Request.QueryString["reauth"] == "True")
+                {
+                    //
+                    // Send an OpenID Connect sign-in request to get a new set of tokens.
+                    // If the user still has a valid session with Azure AD, they will not be prompted for their credentials.
+                    // The OpenID Connect middleware will return to this controller after the sign-in response has been handled.
+                    //
+                    HttpContext.GetOwinContext().Authentication.Challenge(OpenIdConnectAuthenticationDefaults.AuthenticationType);
+                }
+
+                return null;
+            }
+            
+            
+            return new JwtSecurityToken(kdAPITokenCache.AccessToken);
          
         }
 
-        private static List<X509Certificate2> GetX509Certificate2FromADMetadataEndpoint()
-        {
-            List<X509Certificate2> certs = new List<X509Certificate2>();
-            XPathDocument xmlReader = new XPathDocument(Configuration.MetadataUri);
-            XPathNavigator navigator = xmlReader.CreateNavigator();
-            XmlNamespaceManager manager = new XmlNamespaceManager(navigator.NameTable);
-            manager.AddNamespace("", "urn:oasis:names:tc:SAML:2.0:metadata");
-            manager.AddNamespace("ns1", "urn:oasis:names:tc:SAML:2.0:metadata");
-            manager.AddNamespace("ds", "http://www.w3.org/2000/09/xmldsig#");
-            manager.PushScope();
-
-            //Reading all certs since AD periodically do cert rollover
-            XPathNodeIterator nodes =
-                navigator.Select(
-                    "//ns1:EntityDescriptor/ns1:RoleDescriptor/ns1:KeyDescriptor[@use='signing']/ds:KeyInfo/ds:X509Data/ds:X509Certificate",
-                    manager);
-            while (nodes.MoveNext())
-            {
-                XPathNavigator nodesNavigator = nodes.Current;
-                //Cert body is base64 encoded in metadata doc
-                certs.Add(new X509Certificate2(Convert.FromBase64String(nodesNavigator.InnerXml)));
-            }
-
-            
-            return certs;
-        }
 
 
         static public IContentKey CreateEnvelopeTypeContentKey(IAsset asset,CloudMediaContext context)

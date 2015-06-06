@@ -24,8 +24,9 @@ namespace MediaLibraryWebApp
     {
         //Claim name to store Azure Media Services access token
         public const string ClaimsAmsAcessToken = "AMSAccessToken";
-        //Claim name to store JWT token issued by Azure Active Directory
-        public const string ClaimsJwtToken = "ADJwtTokenClaim";
+        //Claim name to store JWT token issued by Azure Active Directory for sign in process
+        public const string ClaimsSignInJwtToken = "ADSignInJwtTokenClaim";
+
         //Object Identifier Claim name 
         public const string ClaimsObjectidentifier = "http://schemas.microsoft.com/identity/claims/objectidentifier";
 
@@ -52,5 +53,6 @@ namespace MediaLibraryWebApp
         public static string MetadataUri = ConfigurationManager.AppSettings["ida:FederationMetaDataUri"];
         //Object Id of AD security group which has application Administrator rights. Used in sample to create media asset auth policies
         public static string AdminGroupId = ConfigurationManager.AppSettings["ida:AdminGroupObjectId"];
+        public static string KdResourceId = ConfigurationManager.AppSettings["ida:KeyDeliveryResourceId"];
     }
 }
