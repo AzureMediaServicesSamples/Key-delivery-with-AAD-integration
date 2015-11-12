@@ -65,7 +65,6 @@ namespace MediaLibraryWebApp.Controllers
 
                 //Locate all files with smooth streaming Manifest
                 ListExtensions.ForEach(cloudMediaContext.Files.Where(c => c.Name.EndsWith(".ism")), file =>
-                
                 {
                     //skip all assets where DynamicEncryption can't be applied
                     if (file.Asset.Options != AssetCreationOptions.None)
@@ -115,7 +114,7 @@ namespace MediaLibraryWebApp.Controllers
             }
             catch (AggregateException)
             {
-                
+
             }
 
             try
@@ -125,7 +124,7 @@ namespace MediaLibraryWebApp.Controllers
             }
             catch (AggregateException)
             {
-                
+
             }
 
             try
@@ -135,7 +134,7 @@ namespace MediaLibraryWebApp.Controllers
             }
             catch (AggregateException)
             {
-                
+
             }
 
             return RedirectToAction("Index");
@@ -168,11 +167,11 @@ namespace MediaLibraryWebApp.Controllers
             deleteTasks = context.ContentKeyAuthorizationPolicyOptions.Where(c => c.Name == asset.Id).ToList().Select(policyOption => policyOption.DeleteAsync()).ToArray();
             Task.WaitAll(deleteTasks);
 
-            
+
         }
 
         [AcceptVerbs(HttpVerbs.Post)]
-        public async Task<ActionResult> EnableJWTTokenAuthentication(string assetId,string claimType, string claimValue)
+        public async Task<ActionResult> EnableJWTTokenAuthentication(string assetId, string claimType, string claimValue)
         {
             var cloudMediaContext = Factory.GetCloudMediaContext();
 
@@ -189,14 +188,14 @@ namespace MediaLibraryWebApp.Controllers
 
             var assetToConfigure = cloudMediaContext.Assets.Where(asset => asset.Id == assetId).FirstOrDefault();
 
-            if (assetToConfigure!=null)
+            if (assetToConfigure != null)
             {
                 //Creating content keys
                 CreateEnvelopeTypeContentKey(assetToConfigure, cloudMediaContext);
                 //Create asset delivery policy
                 CreateAssetDeliveryPolicy(assetToConfigure, assetToConfigure.ContentKeys[0], cloudMediaContext);
                 //Create Authorization policy
-                AddAuthorizationPolicyToContentKey(assetId, cloudMediaContext, assetToConfigure.ContentKeys[0], claimType, claimValue,GetJwtSecurityToken());
+                AddAuthorizationPolicyToContentKey(assetId, cloudMediaContext, assetToConfigure.ContentKeys[0], claimType, claimValue, GetJwtSecurityToken());
 
                 // Create a locator to the streaming content on an origin. 
                 cloudMediaContext.Locators.CreateLocator(LocatorType.OnDemandOrigin, assetToConfigure, accessPolicy, DateTime.UtcNow.AddMinutes(-5));
@@ -211,13 +210,13 @@ namespace MediaLibraryWebApp.Controllers
         {
             CloudMediaContext cloudMediaContext = Factory.GetCloudMediaContext();
             IAsset asset = cloudMediaContext.Assets.Where(c => c.Id == assetId).FirstOrDefault();
-            CleanAssetAccessEntities(cloudMediaContext,asset);
+            CleanAssetAccessEntities(cloudMediaContext, asset);
             return RedirectToAction("Index");
         }
 
         public IContentKey AddAuthorizationPolicyToContentKey(string assetID, CloudMediaContext mediaContext, IContentKey objIContentKey, string claimType, string claimValue, JwtSecurityToken token)
         {
-           //we name auth policy same as asset
+            //we name auth policy same as asset
             var policy = mediaContext.ContentKeyAuthorizationPolicies.Where(c => c.Name == assetID).FirstOrDefault();
 
             // Create ContentKeyAuthorizationPolicy with restrictions and create authorization policy             
@@ -225,22 +224,17 @@ namespace MediaLibraryWebApp.Controllers
             {
                 policy = mediaContext.ContentKeyAuthorizationPolicies.CreateAsync(assetID).Result;
             }
-           
+
             //naming policyOption same as asset
             var policyOption = mediaContext.ContentKeyAuthorizationPolicyOptions.Where(name => name.Name == assetID).FirstOrDefault();
 
             if (policyOption == null)
             {
-
                 List<ContentKeyAuthorizationPolicyRestriction> restrictions = new List<ContentKeyAuthorizationPolicyRestriction>();
-
-               
-
                 TokenRestrictionTemplate template = new TokenRestrictionTemplate();
                 template.TokenType = TokenType.JWT;
                 //Using Active Directory Open ID discovery spec to use Json Web Keys during token verification
                 template.OpenIdConnectDiscoveryDocument = new OpenIdConnectDiscoveryDocument("https://login.windows.net/common/.well-known/openid-configuration");
-              
 
 
                 //Ignore Empty claims
@@ -289,10 +283,7 @@ namespace MediaLibraryWebApp.Controllers
 
             if (kdAPITokenCache == null)
             {
-
-
                 authContext.TokenCache.Clear();
-               
                 ViewBag.ErrorMessage = "AuthorizationRequired";
                 if (Request.QueryString["reauth"] == "True")
                 {
@@ -306,15 +297,13 @@ namespace MediaLibraryWebApp.Controllers
 
                 return null;
             }
-            
-            
+
             return new JwtSecurityToken(kdAPITokenCache.AccessToken);
-         
         }
 
 
 
-        static public IContentKey CreateEnvelopeTypeContentKey(IAsset asset,CloudMediaContext context)
+        static public IContentKey CreateEnvelopeTypeContentKey(IAsset asset, CloudMediaContext context)
         {
             // Create envelope encryption content key
             Guid keyId = Guid.NewGuid();
@@ -343,7 +332,7 @@ namespace MediaLibraryWebApp.Controllers
         }
 
 
-        static public void CreateAssetDeliveryPolicy(IAsset asset, IContentKey key,CloudMediaContext cloudMediaContext)
+        static public void CreateAssetDeliveryPolicy(IAsset asset, IContentKey key, CloudMediaContext cloudMediaContext)
         {
             Uri keyAcquisitionUri = key.GetKeyDeliveryUrl(ContentKeyDeliveryType.BaselineHttp);
 
@@ -370,7 +359,7 @@ namespace MediaLibraryWebApp.Controllers
             asset.DeliveryPolicies.Add(assetDeliveryPolicy);
         }
 
-        static public string GetStreamingOriginLocator(IAsset asset,CloudMediaContext context )
+        static public string GetStreamingOriginLocator(IAsset asset, CloudMediaContext context)
         {
 
             // Get a reference to the streaming manifest file from the  
