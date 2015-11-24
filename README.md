@@ -62,7 +62,29 @@ Once your asset is published, you can use the steps described in [How to: Play c
 15. Upload application manifest back to Azure portal
 16. In section 'Permission to other applications ' select Windows Azure Active Directory Application permissions and check all checkboxes.
 
-### Step 4:  Configure the sample to use your Azure AD tenant and Azure Media Service
+
+
+#### Register the application to act as resource for which JWT token is issued. Obtained JWT token will be used to communicate with Azure Media Services Key delivery service. 
+ 
+
+1. Sign in to the [Azure management portal](https://manage.windowsazure.com).
+2. Click on Active Directory in the left hand nav.
+3. Click the directory tenant where you wish to register the resource application.
+4. Click the Applications tab.
+5. In the drawer, click Add.
+6. Click "Add an application my organization is developing".
+7. Enter a friendly name for the application, for example "Keydelivery", select "Web Application and/or Web API", and click next.
+8. For the sign-on URL, enter the base URL for the resource app. For example: http://yourdomain.onmicrosoft.com/MediaLibraryWebKeyDelivery
+9. For the App ID URI, enter `https://<your_tenant_name>/MediaLibraryWebKeyDelivery`, replacing `<your_tenant_name>` with the name of your Azure AD tenant.  Click OK to complete the registration.
+10. While still in the Azure portal, click the Configure tab of your application.
+11. Find the Client ID value and copy it aside, you will need this later when configuring your application.
+12. Create a new key for the application.  Save the configuration so you can view the key value.  Save this aside for when you configure the project in Visual Studio.
+13. Download 'Keydelivery' application manifest from Azure portal
+14. Find property `groupMembershipClaims` and change it value to `All`. `"groupMembershipClaims": "All",` 
+15. Upload application manifest back to Azure portal
+16. In section 'Permission to other applications ' select Windows Azure Active Directory Application permissions and check all checkboxes.
+
+### Step 5:  Configure the sample to use your Azure AD tenant and Azure Media Service
 
 #### Configure the MediaLibraryWebApp project
 
@@ -70,17 +92,18 @@ Once your asset is published, you can use the steps described in [How to: Play c
 2. Open the `web.config` file.
 3. Find the app key `ida:Tenant` and replace the value with your AAD tenant name.
 4. Find the app key `ida:ClientId` and replace the value with the Client ID for the MediaLibraryWebApp from the Azure portal.
-5. Find the app key `ida:AppKey` and replace the value with the key for the MediaLibraryWebApp from the Azure portal.
-6. If you changed the base URL of the MediaLibraryWebApp sample, find the app key `ida:PostLogoutRedirectUri` and replace the value with the new base URL of the sample.
-7.  Find the app key `ida:FederationMetaDataUri` and replace it with the FederationMetaDataUri from the Azure portal. Click 'View Endpoints' in domain applications list screen.
-8. Find the app key `ida:AdminGroupObjectId` and replace the value with your Admin group ObjectID obtained earlier in Step 3.
-9.  Find the app key `ida:MediaServicesAccount` and replace the value with you Azure Media Services account name 
-10. Find the app key `ida:MediaServicesKey` and replace the value with you Azure Media Services account key. You can find value in Azure portal.      
+5. Find the app key `ida:KeyDeliveryResourceId' and replace the value with the Client ID for the Keydelivery app from the Azure portal.
+6. Find the app key `ida:AppKey` and replace the value with the key for the MediaLibraryWebApp from the Azure portal.
+7. If you changed the base URL of the MediaLibraryWebApp sample, find the app key `ida:PostLogoutRedirectUri` and replace the value with the new base URL of the sample.
+8.  Find the app key `ida:FederationMetaDataUri` and replace it with the FederationMetaDataUri from the Azure portal. Click 'View Endpoints' in domain applications list screen.
+9. Find the app key `ida:AdminGroupObjectId` and replace the value with your Admin group ObjectID obtained earlier in Step 3.
+10.  Find the app key `ida:MediaServicesAccount` and replace the value with you Azure Media Services account name 
+11. Find the app key `ida:MediaServicesKey` and replace the value with you Azure Media Services account key. You can find value in Azure portal.      
 
 
 
 
-### Step 5:  Run the sample
+### Step 6:  Run the sample
 
 Clean the solution, rebuild the solution, and run it.  You might want to go into the solution properties and set both projects as startup projects, with the service project starting first.
 
